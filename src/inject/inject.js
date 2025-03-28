@@ -18,11 +18,11 @@ var readyStateCheckInterval = setInterval(function () {
 // Setup, build output UI, and attach DOM observers
 var doSetup = function () {
 
-    // inject pot odds UI box
+    // Inject pot odds UI box
     var html = "<div class='pot-odds-container'>Pot odds:&nbsp;<span class='pot-odds-value'>&mdash;</span></div>";
     jQuery(".table").prepend(jQuery(html));
 
-    // inject stack total UI box
+    // Inject stack total UI box
     var html = "<div class='chip-count-container'>Chip count:&nbsp;<span class='chip-count-value'>&mdash;</span></div>";
     jQuery(".table").prepend(jQuery(html));
 
@@ -136,7 +136,7 @@ var updatePotOdds = function () {
 var updateWinPercent = function () {
     jQuery(".win-value").html("&mdash;");
     jQuery(".tie-value").html("&mdash;");
-    // jQuery(".hands-value").html("&mdash;")
+    jQuery(".hands-value").html("High Card: - | Pair: - | Two Pair: - | Trips: - | Straight: - | Flush: - | Full House: - | Quads: - | Straight Flush: -")
     // Extract hand cards from the table-cards element
     var handCards = formatString(jQuery(".table-player-1.you-player .table-player-cards").text().trim());
 
@@ -157,8 +157,8 @@ var updateWinPercent = function () {
 
 
     var equity = monteCarlo(handCards, tableCards, seats, opsLag, 50000)
-    jQuery(".win-value").html(toPercent(equity.results.wins, equity.results.runs ));
-    jQuery(".tie-value").html(toPercent(equity.results.ties, equity.results.runs ));
+    jQuery(".win-value").html(Math.round(10000 * equity.results.wins / equity.results.runs ) / 100 + '%');
+    jQuery(".tie-value").html(Math.round(10000 * equity.results.ties / equity.results.runs ) / 100 + '%');
     var hands = equity.handOdds[0]
     jQuery(".hands-value").html("High Card: " + hands.hicard + " %" +
         " | Pair: " + hands.pair + " %" +
@@ -179,6 +179,7 @@ var updateWinPercent = function () {
 };
 
 function formatString(input) {
+    input = input.replaceAll("10", "T")
     let result = [];
 
     // Loop through the string in chunks of 3
@@ -535,8 +536,4 @@ function rankHand(cards) {
             handName: name
         };
     }
-}
-
-function toPercent(hits, total) {
-    return Math.round( 10000 * hits / total ) / 100 + '%'
 }

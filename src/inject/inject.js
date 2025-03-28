@@ -62,7 +62,7 @@ var doSetup = function () {
                 updatePotOdds();
             }
 
-            if (c.match(/flipped/)) {
+            if (c.match(/flipped/) && !c.match(/semi\-hide/)) {
                 updateWinPercent();
             }
         }

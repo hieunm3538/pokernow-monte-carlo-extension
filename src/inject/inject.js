@@ -152,11 +152,11 @@ var updateWinPercent = function () {
             continue
         }
         seats += 1
-        opsLag.push(0.5)
+        opsLag.push(".4")
     }
 
 
-    var equity = monteCarlo(handCards, tableCards, seats, opsLag, 12000)
+    var equity = monteCarlo(handCards, tableCards, seats, opsLag, 50000)
     jQuery(".win-value").html(toPercent(equity.results.wins, equity.results.runs ));
     jQuery(".tie-value").html(toPercent(equity.results.ties, equity.results.runs ));
     var hands = equity.handOdds[0]

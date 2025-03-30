@@ -18,9 +18,7 @@ This gives you a clearer picture of your hand’s strength.
 
 ## How does it work?
 
-Once you've installed the Chrome extension, you'll see a small "Pot odds" box appear at all times. 
-The odds are expressed as a fraction of `1.0`.
-Additionally, a win/tie/loss percentage will display in the center of the table, based on your current cards.
-For a visual example, check out this screenshot.
+Once you've installed the Chrome extension, you'll see a small "Pot odds" box appear at top right side of the screen.
+A win/tie percentage will be on the top left and rate of possible Poker hit will display in the center of the table, based on your current cards.
 ![Screenshot](https://github.com/hieunm3538/pokernow-monte-carlo-extension/blob/main/docs/img.png)
 This extension simplifies poker decisions with real-time data, making it easier to play smarter!

@@ -4,7 +4,7 @@
   top: 1.25rem;
   color: #777;
   text-transform: uppercase;
-  font-size: .5rem;
+  font-size: .6rem;
 }
 
 .chip-count-container {
@@ -13,7 +13,7 @@
   top: 2.25rem;
   color: #777;
   text-transform: uppercase;
-  font-size: .5rem;
+  font-size: .6rem;
 }
 
 .win-container {
@@ -22,7 +22,7 @@
   top: 1.25rem;
   color: #777;
   text-transform: uppercase;
-  font-size: .5rem;
+  font-size: .6rem;
 }
 
 .tie-container {
@@ -31,7 +31,7 @@
   top: 2.25rem;
   color: #777;
   text-transform: uppercase;
-  font-size: .5rem;
+  font-size: .6rem;
 }
 
 .hands-container {
@@ -40,6 +40,6 @@
   transform: translateX(-50%);
   top: 15.25rem;
   color: #f0f0f0;
-  font-size: .5rem;
+  font-size: .65rem;
   text-align: center;
 }

@@ -166,7 +166,7 @@ var updateWinPercent = function () {
         " | Trips: " + hands.trips + " %" +
         " | Straight: " + hands.straight + " %" +
         " | Flush: " + hands.flush + " %" +
-        " | Full House: " + hands.FH + " %" +
+        " <br> Full House: " + hands.FH + " %" +
         " | Quads: " + hands.quads + " %" +
         " | Straight Flush: " + hands.straightflush + " %"
     )

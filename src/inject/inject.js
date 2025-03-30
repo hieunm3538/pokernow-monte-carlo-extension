@@ -62,7 +62,7 @@ var doSetup = function () {
                 updatePotOdds();
             }
 
-            if (c.match(/flipped/) && !c.match(/semi\-hide/)) {
+            if (c.match(/decision\-current/)) {
                 updateWinPercent();
             }
         }
@@ -152,11 +152,14 @@ var updateWinPercent = function () {
             continue
         }
         seats += 1
+    }
+
+    for (i = 1; i < seats; i++) {
         opsLag.push(".4")
     }
 
 
-    var equity = monteCarlo(handCards, tableCards, seats, opsLag, 50000)
+    var equity = monteCarlo(handCards, tableCards, seats - 1, opsLag, 50000)
     jQuery(".win-value").html(Math.round(10000 * equity.results.wins / equity.results.runs ) / 100 + '%');
     jQuery(".tie-value").html(Math.round(10000 * equity.results.ties / equity.results.runs ) / 100 + '%');
     var hands = equity.handOdds[0]

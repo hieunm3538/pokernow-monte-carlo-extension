@@ -16,9 +16,17 @@ The win rate feature estimates your chances of winning, tying, or losing a hand.
 It uses a Monte Carlo simulation—a method that runs multiple scenarios—to evaluate your known cards against the unknown hands of your opponents. 
 This gives you a clearer picture of your hand’s strength.
 
+## Possible Hit calculation
+
+In addition to pot odds and win rate, this extension also shows your "possible hit rates"—the chances of improving your hand based on the cards you currently hold. 
+
+By showing these probabilities in real time, the extension helps you make more informed decisions—whether you're chasing a draw or deciding if your current hand is strong enough to bet.
+
 ## How does it work?
 
 Once you've installed the Chrome extension, you'll see a small "Pot odds" box appear at top right side of the screen.
 A win/tie percentage will be on the top left and rate of possible Poker hit will display in the center of the table, based on your current cards.
-![Screenshot](https://github.com/hieunm3538/pokernow-monte-carlo-extension/blob/main/docs/img.png)
+
 This extension simplifies poker decisions with real-time data, making it easier to play smarter!
+
+![Screenshot](https://github.com/hieunm3538/pokernow-monte-carlo-extension/blob/main/docs/img.png)

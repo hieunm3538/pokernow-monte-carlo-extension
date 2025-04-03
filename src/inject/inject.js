@@ -138,21 +138,13 @@ var updateWinPercent = function () {
     jQuery(".tie-value").html("&mdash;");
     jQuery(".hands-value").html("High Card: - | Pair: - | Two Pair: - | Trips: - | Straight: - | Flush: - | Full House: - | Quads: - | Straight Flush: -")
     // Extract hand cards from the table-cards element
-    var handCards = formatString(jQuery(".table-player-1.you-player .table-player-cards").text().trim());
+    var handCards = formatString(jQuery(".you-player .table-player-cards").text().trim());
 
     // Extract hand cards from the table-cards element
     var tableCards = formatString(jQuery(".table-cards").text().trim());
 
     // Extract number of player
-    var seats = 0
-    var opsLag = []
-    for (i = 1; i <= 10; i++) {
-        var player = jQuery(`.table-player-` + i.toString()).text().trim();
-        if (player === "") {
-            continue
-        }
-        seats += 1
-    }
+    var seats = jQuery(".table-player-stack").toArray().length
 
     var equity = monteCarlo(handCards, tableCards, seats - 1, [], 8000)
     jQuery(".win-value").html(Math.round(10000 * equity.results.wins / equity.results.runs ) / 100 + '%');

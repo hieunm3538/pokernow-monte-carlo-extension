@@ -144,7 +144,7 @@ var updateWinPercent = function () {
     var tableCards = formatString(jQuery(".table-cards").text().trim());
 
     // Extract number of player
-    var seats = jQuery(".table-player-stack").toArray().length
+    var seats = jQuery(".table-player-stack").toArray().length - jQuery(".table-player .fold").toArray().length
 
     var equity = monteCarlo(handCards, tableCards, seats - 1, [], 8000)
     jQuery(".win-value").html(Math.round(10000 * equity.results.wins / equity.results.runs ) / 100 + '%');

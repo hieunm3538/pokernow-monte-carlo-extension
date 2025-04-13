@@ -481,11 +481,17 @@ function rankHand(cards) {
     // Full House
     let three = null, pair = null;
     for (let r in rankCounts) {
-        if (rankCounts[r] === 3) three = r;
+        if (rankCounts[r] === 3) {
+            if (three === null) {
+                three = r;
+            } else {
+                pair = r;
+            }
+        }
         if (rankCounts[r] === 2) pair = r;
     }
     if (three !== null && pair !== null) {
-        return buildHand(7, three, 7000000 + three * 100 + pair, "full house");
+        return buildHand(7, three, 7000000 + three * 100 + pair * 1, "full house");
     }
 
     // Flush
@@ -522,7 +528,7 @@ function rankHand(cards) {
         return {
             handType: type,
             handRank: rank,
-            value: value,
+            value: parseInt(value),
             handName: name
         };
     }

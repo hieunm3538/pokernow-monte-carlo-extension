@@ -1,6 +1,6 @@
 {
   "name": "Poker Now Odds Calculator",
-  "version": "1.0.5",
+  "version": "1.0.6",
   "manifest_version": 3,
   "description": "This extension adds a odds calculator widget to the Poker Now website.",
   "homepage_url": "https://www.pokernow.club",

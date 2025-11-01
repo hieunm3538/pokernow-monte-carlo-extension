@@ -17,43 +17,49 @@ var readyStateCheckInterval = setInterval(function () {
 
 // Setup, build output UI, and attach DOM observers
 var doSetup = function () {
+    // Ensure the table element exists
+    var $table = jQuery(".table");
+
+    if ($table.length === 0) {
+        console.warn("No .table element found in the DOM. Aborting setup.");
+        return;
+    }
 
     // Inject pot odds UI box
     var html = "<div class='pot-odds-container'>Pot odds:&nbsp;<span class='pot-odds-value'>&mdash;</span></div>";
-    jQuery(".table").prepend(jQuery(html));
+    $table.prepend(jQuery(html));
 
     // Inject stack total UI box
-    var html = "<div class='chip-count-container'>Chip count:&nbsp;<span class='chip-count-value'>&mdash;</span></div>";
-    jQuery(".table").prepend(jQuery(html));
+    html = "<div class='chip-count-container'>Chip count:&nbsp;<span class='chip-count-value'>&mdash;</span></div>";
+    $table.prepend(jQuery(html));
 
     // Inject win UI box
-    var html = "<div class='win-container'>Wins:&nbsp;<span class='win-value'>&mdash;</span></div>";
-    jQuery(".table").prepend(jQuery(html));
+    html = "<div class='win-container'>Wins:&nbsp;<span class='win-value'>&mdash;</span></div>";
+    $table.prepend(jQuery(html));
 
     // Inject ties UI box
-    var html = "<div class='tie-container'>Ties:&nbsp;<span class='tie-value'>&mdash;</span></div>";
-    jQuery(".table").prepend(jQuery(html));
+    html = "<div class='tie-container'>Ties:&nbsp;<span class='tie-value'>&mdash;</span></div>";
+    $table.prepend(jQuery(html));
 
     // Inject hands UI box
-    var html = "<div class='hands-container'>&nbsp;<span class='hands-value'>&mdash;</span></div>";
-    jQuery(".table").prepend(jQuery(html));
+    html = "<div class='hands-container'>&nbsp;<span class='hands-value'>&mdash;</span></div>";
+    $table.prepend(jQuery(html));
 
-    // Initiate observers
-    var targetNode = jQuery(".table")[0];
+    // Get the DOM node from jQuery object
+    var targetNode = $table[0];
 
     // Options for the observer (which mutations to observe)
-    const config = {characterData: true, attributes: true, childList: true, subtree: true};
+    const config = { characterData: true, attributes: true, childList: true, subtree: true };
 
     // Callback function to execute when mutations are observed
     var callback = function (mutationsList, observer) {
         for (var mutation of mutationsList) {
-
             // Skip non-element nodes
             if (
-                !mutation.target.getAttribute
-                || !mutation.target.getAttribute('class')
+                !mutation.target.getAttribute ||
+                !mutation.target.getAttribute('class')
             ) {
-                continue
+                continue;
             }
 
             var c = mutation.target.getAttribute('class');
@@ -74,7 +80,7 @@ var doSetup = function () {
     // Start observing the target node for configured mutations
     observer.observe(targetNode, config);
 
-    if (DEBUG) {
+    if (typeof DEBUG !== "undefined" && DEBUG) {
         console.log("...setup done.");
     }
 };

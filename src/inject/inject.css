@@ -32,7 +32,7 @@
   transform: translateX(-50%);
   top: 17.75rem;
   color: #f0f0f0;
-  font-size: .75rem;
+  font-size: .65rem;
   text-align: center;
 }
 
@@ -69,3 +69,12 @@
 .ev-value.ev-good { color: #4caf50; }
 .ev-value.ev-bad { color: #e5534b; }
 .ev-value.ev-meh { color: #e0a030; }
+
+.vpip-badge {
+  display: block;
+  text-align: center;
+  color: #f0f0f0;
+  font-size: .6rem;
+  font-weight: 700;
+  white-space: nowrap;
+}

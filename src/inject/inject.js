@@ -109,7 +109,8 @@ var scheduleUpdate = function () {
 
         if (doPot) updatePotOdds();
         if (doWin) updateWinPercent();
-        updateInfoPanel()
+        updateInfoPanel();
+        trackVpip();
     }, 50);
 }
 
@@ -159,7 +160,7 @@ var updatePotOdds = function () {
 
     // Display count of all chips on the table.
     // TODO: refactor this into a separate function, which daws current values from global variables.
-    var stackTotals = jQuery(".table-player-stack").toArray().reduce((a, b) => a + parseChips(b.innerText), 0);
+    var stackTotals = jQuery(".table-player-stack").toArray().reduce((a, b) => a + stackValue(b), 0);
     var chipCount = stackTotals + potTotal + currentBetsTotal;
     jQuery(".chip-count-value").html(chipCount);
 };
@@ -207,7 +208,7 @@ var updateWinPercent = function () {
     var outs = computeOuts(handCards, tableCards);
     if (outs) jQuery(".outs-value").html(formatOuts(outs, tableCards.length));
 
-    var equity = monteCarlo(handCards, tableCards, opponents, 8000)
+    var equity = monteCarlo(handCards, tableCards, opponents, 30000)
     lastEquity = (equity.results.wins + equity.results.ties / 2) / equity.results.runs;
     jQuery(".win-value").html(Math.round(10000 * equity.results.wins / equity.results.runs ) / 100 + '%');
     jQuery(".tie-value").html(Math.round(10000 * equity.results.ties / equity.results.runs ) / 100 + '%');
@@ -234,6 +235,10 @@ var updateWinPercent = function () {
 function parseChips(text) {
     var n = parseFloat(String(text || "").replace(/,/g,"").replace(/[^0-9.]/g,""));
     return isNaN(n) ? 0 : n;
+}
+
+function stackValue(stackEl) {
+    return parseChips(jQuery(stackEl).find(".chip-value .normal-value").first().text());
 }
 
 function readCards(selector) {
@@ -323,7 +328,7 @@ var updateInfoPanel = function (){
     var largest = Math.max(0, ...bets);
 
     var heroBet = parseChips($you.find("p.table-player-bet-value").first().text());
-    var heroStack = parseChips($you.find(".table-player-stack").text());
+    var heroStack = stackValue($you.find(".table-player-stack"));
 
     // Amount we must add to call, capped by our stack (an uncallable excess comes back to the bettor)
     var toCall = largest - heroBet;
@@ -349,7 +354,7 @@ var updateInfoPanel = function (){
     // Position and stack-to-pot ratio (effective stack = ours vs the biggest stack still in)
     var position = positionName(dealerSeat(), seatNumber($you[0]), dealtSeats);
     var oppStacks = active.filter(function (el) { return el !== $you[0]; }).map(function (el) {
-        return parseChips(jQuery(el).find(".table-player-stack").text());
+        return stackValue(jQuery(el).find(".table-player-stack"));
     });
     var spr = "";
     if (pot > 0 && oppStacks.length > 0) {
@@ -357,6 +362,111 @@ var updateInfoPanel = function (){
         spr = " | SPR " + value.toFixed(1) + (value < 4 ? " (low)" : value < 10 ? " (medium)" : " (high)");
     }
     jQuery(".position-value").html((position || "?") + spr);
+};
+
+// VPIP: how often a player voluntarily puts chips in preflop (calls or raises; posting a blind doesn't count).
+// There is no action feed in the DOM, so we infer it from the bets shown preflop.
+const VPIP_KEY = "pnmc.vpip";
+
+function loadVpip() {
+    try { return JSON.parse(localStorage.getItem(VPIP_KEY)) || {}; } catch (e) { return {}; }
+}
+
+function saveVpip() {
+    try { localStorage.setItem(VPIP_KEY, JSON.stringify(vpipStats)); } catch (e) {}
+}
+
+var vpipStats = loadVpip();       // player id -> {name, hands, vpip}
+var vpipHand = null;       // current hand: {dealer, seen, seats, voluntary}
+var vpipPostflop = true;// the next preflop starts a new hand
+
+function playerId(el) {
+    var href = jQuery(el).find(".table-player-name a").attr("href") || "";
+    var m = /\/players\/([^\/?#]+)/.exec(href);
+    return m ? m[1] : (jQuery(el).find(".table-player-name").text().trim() || null);
+}
+
+function blinds() {
+    var v = jQuery(".blind-value .chips-value .normal-value").toArray().map(function (e) {
+        return parseChips(e.textContent);
+    });
+    return v.length >= 2 ? { sb: v[0], bb: v[1] } : null;
+}
+
+var trackVpip = function ()  {
+    if (readCards(".table-cards").length > 0) {
+        vpipPostflop = true;
+        renderVpip();
+        return;
+    }
+
+    var dealer = dealerSeat();
+    var players = jQuery(".table-player").toArray().filter(function (el) {
+        return jQuery(el).find(".table-player-cards .card-container").length > 0;
+    });
+    if (players.length === 0) {
+        renderVpip();
+        return;
+    }
+
+    if (vpipPostflop || vpipHand === null || vpipHand.dealer !== dealer) {
+        vpipHand = { dealer: dealer, seen: {}, seats: [], voluntary: {} };
+        vpipPostflop = false;
+    }
+
+    var changed = false;
+    var bl = blinds();
+
+    // Count each player once per hand, the first time they are seen holding cards
+    players.forEach(function (el) {
+        var id = playerId(el);
+        if (!id || vpipHand.seen[id] !== undefined) return;
+        vpipHand.seen[id] = seatNumber(el);
+        vpipHand.seats.push(seatNumber(el));
+        var st = vpipStats[id] || (vpipStats[id] = { name: "", hands: 0, vpip: 0 });
+        st.name = jQuery(el).find(".table-player-name").text().trim();
+        st.hands++;
+        changed = true;
+    });
+
+    // Voluntary = a bet above what the blind they posted forces
+    if (bl) {
+        players.forEach(function (el) {
+            var id = playerId(el);
+            if (!id || vpipHand.voluntary[id]) return;
+
+            var bet = parseChips(jQuery(el).find("p.table-player-bet-value").first().text());
+            if (bet <= 0) return;
+
+            var role = positionName(dealer, vpipHand.seen[id], vpipHand.seats);
+            var forced = role === "BB" ? bl.bb : (role === "SB" || role === "BTN/SB") ? bl.sb : 0;
+            if (bet > forced) {
+                vpipHand.voluntary[id] = true;
+                vpipStats[id].vpip++;
+                changed = true;
+            }
+        });
+    }
+
+    if (changed) saveVpip();
+    renderVpip();
+};
+
+// Small badge under each player's name/stack
+var renderVpip = function () {
+    jQuery(".table-player").each(function () {
+        var id = playerId(this);
+        var $ctn = jQuery(this).find(".table-player-infos-ctn").first();
+        if (!id || $ctn.length === 0) return;
+
+        var $badge = $ctn.find(".vpip-badge");
+        if ($badge.length === 0) $badge = jQuery("<div class='vpip-badge'></div>").appendTo($ctn);
+
+        var st = vpipStats[id];
+        $badge.text(st && st.hands > 0
+            ? "VPIP " + Math.round(100 * st.vpip / st.hands) + "% (" + st.hands + ")"
+            : "VPIP -");
+    });
 };
 
 // MONTE CARLO

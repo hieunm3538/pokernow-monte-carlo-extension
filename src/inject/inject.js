@@ -9,11 +9,17 @@ var readyStateCheckInterval = setInterval(function () {
             console.log("Beginning inject.js...");
         }
 
-        setTimeout(function () {
-            doSetup();
-        }, 1000);
+        var tableCheckInterval = setInterval(function () {
+            if (jQuery(".table").length > 0) {
+                clearInterval(tableCheckInterval);
+                doSetup();
+            }
+        }, 500);
     }
 }, 10);
+
+var setupObserver = null;
+var refreshTimer = null;
 
 // Setup, build output UI, and attach DOM observers
 var doSetup = function () {
@@ -24,6 +30,10 @@ var doSetup = function () {
         console.warn("No .table element found in the DOM. Aborting setup.");
         return;
     }
+
+    if (setupObserver) setupObserver.disconnect();
+    $table.find(".pot-odds-container, .chip-count-container, .results-container, .hands-container, " +
+        ".ev-container, .outs-container, .position-container").remove();
 
     // Inject pot odds UI box
     var html = "<div class='pot-odds-container'>Pot odds:&nbsp;<span class='pot-odds-value'>&mdash;</span></div>";
@@ -72,7 +82,7 @@ var doSetup = function () {
 
             var c = mutation.target.getAttribute('class');
 
-            if (c.match(/decision\-current|flipped/)) {
+            if (c.match(/decision\-current|flipped|winner/)) {
                 needPotOdds = true;
             }
 
@@ -89,6 +99,11 @@ var doSetup = function () {
 
     // Start observing the target node for configured mutations
     observer.observe(targetNode, config);
+    setupObserver = observer;
+
+    refreshAll();
+    if (refreshTimer) clearInterval(refreshTimer);
+    refreshTimer = setInterval(refreshAll, 1000);
 
     if (typeof DEBUG !== "undefined" && DEBUG) {
         console.log("...setup done.");
@@ -98,6 +113,18 @@ var doSetup = function () {
 var needPotOdds = false;
 var needWinPercent = false;
 var updateTimer = null;
+
+var refreshAll = function () {
+    if (jQuery(".table .results-container").length === 0) {
+        doSetup();
+        return;
+    }
+
+    updatePotOdds();
+    updateWinPercent();
+    updateInfoPanel();
+    trackVpip();
+}
 
 var scheduleUpdate = function () {
     if (updateTimer !== null || !(needPotOdds || needWinPercent)) return;
@@ -238,7 +265,7 @@ function parseChips(text) {
 }
 
 function stackValue(stackEl) {
-    return parseChips(jQuery(stackEl).find(".chip-value .normal-value").first().text());
+    return parseChips(jQuery(stackEl).find(".chips-value .normal-value").first().text());
 }
 
 function readCards(selector) {
@@ -463,9 +490,10 @@ var renderVpip = function () {
         if ($badge.length === 0) $badge = jQuery("<div class='vpip-badge'></div>").appendTo($ctn);
 
         var st = vpipStats[id];
-        $badge.text(st && st.hands > 0
+        var text = st && st.hands > 0
             ? "VPIP " + Math.round(100 * st.vpip / st.hands) + "% (" + st.hands + ")"
-            : "VPIP -");
+            : "VPIP -";
+        if ($badge.text() !== text) $badge.text(text);
     });
 };
 

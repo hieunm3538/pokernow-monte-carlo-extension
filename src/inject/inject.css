@@ -77,4 +77,6 @@
   font-size: .6rem;
   font-weight: 700;
   white-space: nowrap;
+  position: relative;
+  top: -1.5rem;
 }

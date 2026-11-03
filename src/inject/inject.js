@@ -33,15 +33,11 @@ var doSetup = function () {
 
     if (setupObserver) setupObserver.disconnect();
     shown = {};
-    $table.find(".pot-odds-container, .chip-count-container, .results-container, .hands-container, " +
+    $table.find(".pot-odds-container, .results-container, .hands-container, " +
         ".ev-container, .outs-container, .position-container").remove();
 
     // Inject pot odds UI box
     var html = "<div class='pot-odds-container'>Pot odds:&nbsp;<span class='pot-odds-value'>&mdash;</span></div>";
-    $table.prepend(jQuery(html));
-
-    // Inject stack total UI box
-    html = "<div class='chip-count-container'>Chip count:&nbsp;<span class='chip-count-value'>&mdash;</span></div>";
     $table.prepend(jQuery(html));
 
     // Inject hands UI box
@@ -197,12 +193,6 @@ var updatePotOdds = function () {
         console.log("Current player bet: " + currentPlayerBet);
         console.log("Pot odds: " + potOdds);
     }
-
-    // Display count of all chips on the table.
-    // TODO: refactor this into a separate function, which daws current values from global variables.
-    var stackTotals = jQuery(".table-player-stack").toArray().reduce((a, b) => a + stackValue(b), 0);
-    var chipCount = stackTotals + potTotal + currentBetsTotal;
-    setHtml(".chip-count-value", chipCount);
 };
 
 var lastWinKey = null;
@@ -415,15 +405,23 @@ var updateInfoPanel = function (){
 const VPIP_KEY = "pnmc.vpip";
 
 function loadVpip() {
-    try { return JSON.parse(localStorage.getItem(VPIP_KEY)) || {}; } catch (e) { return {}; }
+    try {
+        var data = JSON.parse(localStorage.getItem(VPIP_KEY)) || {};
+        // Backfill new stat fields for entries saved by older versions
+        Object.keys(data).forEach(function (id) {
+            if (typeof data[id].pfr !== 'number') data[id].pfr = 0;
+            if (typeof data[id].threeBet !== 'number') data[id].threeBet = 0;
+        });
+        return data;
+    } catch (e) { return {}; }
 }
 
 function saveVpip() {
     try { localStorage.setItem(VPIP_KEY, JSON.stringify(vpipStats)); } catch (e) {}
 }
 
-var vpipStats = loadVpip();       // player id -> {name, hands, vpip}
-var vpipHand = null;       // current hand: {dealer, seen, seats, voluntary}
+var vpipStats = loadVpip();       // player id -> {name, hands, vpip, pfr, threeBet}
+var vpipHand = null;       // current hand: {dealer, seen, seats, voluntary, pfr, threeBet, maxBet, raiseCount}
 var vpipPostflop = true;// the next preflop starts a new hand
 
 function playerId(el) {
@@ -455,13 +453,25 @@ var trackVpip = function ()  {
         return;
     }
 
+    var bl = blinds();
+
     if (vpipPostflop || vpipHand === null || vpipHand.dealer !== dealer) {
-        vpipHand = { dealer: dealer, seen: {}, seats: [], voluntary: {} };
+        vpipHand = {
+            dealer: dealer,
+            seen: {},
+            seats: [],
+            voluntary: {},
+            pfr: {},
+            threeBet: {},
+            // Largest bet seen so far this hand. Starts at the big blind so that
+            // any bet above it counts as a raise (and a call of the BB does not).
+            maxBet: bl ? bl.bb : 0,
+            raiseCount: 0
+        };
         vpipPostflop = false;
     }
 
     var changed = false;
-    var bl = blinds();
 
     // Count each player once per hand, the first time they are seen holding cards
     players.forEach(function (el) {
@@ -469,7 +479,7 @@ var trackVpip = function ()  {
         if (!id || vpipHand.seen[id] !== undefined) return;
         vpipHand.seen[id] = seatNumber(el);
         vpipHand.seats.push(seatNumber(el));
-        var st = vpipStats[id] || (vpipStats[id] = { name: "", hands: 0, vpip: 0 });
+        var st = vpipStats[id] || (vpipStats[id] = { name: "", hands: 0, vpip: 0, pfr: 0, threeBet: 0 });
         st.name = jQuery(el).find(".table-player-name").text().trim();
         st.hands++;
         changed = true;
@@ -479,17 +489,39 @@ var trackVpip = function ()  {
     if (bl) {
         players.forEach(function (el) {
             var id = playerId(el);
-            if (!id || vpipHand.voluntary[id]) return;
+            if (!id) return;
 
             var bet = parseChips(jQuery(el).find("p.table-player-bet-value").first().text());
-            if (bet <= 0) return;
 
-            var role = positionName(dealer, vpipHand.seen[id], vpipHand.seats);
-            var forced = role === "BB" ? bl.bb : (role === "SB" || role === "BTN/SB") ? bl.sb : 0;
-            if (bet > forced) {
-                vpipHand.voluntary[id] = true;
-                vpipStats[id].vpip++;
-                changed = true;
+            // VPIP: any voluntary bet above the forced blind
+            if (!vpipHand.voluntary[id] && bet > 0) {
+                var role = positionName(dealer, vpipHand.seen[id], vpipHand.seats);
+                var forced = role === "BB" ? bl.bb : (role === "SB" || role === "BTN/SB") ? bl.sb : 0;
+                if (bet > forced) {
+                    vpipHand.voluntary[id] = true;
+                    vpipStats[id].vpip++;
+                    changed = true;
+                }
+            }
+
+            // PFR / 3-Bet: a bet that exceeds the current largest bet is a raise.
+            // The first raise of the hand is a PFR; any subsequent raise is a 3-Bet (re-raise).
+            if (bet > vpipHand.maxBet) {
+                if (vpipHand.raiseCount === 0) {
+                    if (!vpipHand.pfr[id]) {
+                        vpipHand.pfr[id] = true;
+                        vpipStats[id].pfr = (vpipStats[id].pfr || 0) + 1;
+                        changed = true;
+                    }
+                } else {
+                    if (!vpipHand.threeBet[id]) {
+                        vpipHand.threeBet[id] = true;
+                        vpipStats[id].threeBet = (vpipStats[id].threeBet || 0) + 1;
+                        changed = true;
+                    }
+                }
+                vpipHand.maxBet = bet;
+                vpipHand.raiseCount++;
             }
         });
     }
@@ -509,9 +541,15 @@ var renderVpip = function () {
         if ($badge.length === 0) $badge = jQuery("<div class='vpip-badge'></div>").appendTo(this);
 
         var st = vpipStats[id];
-        var text = st && st.hands > 0
-            ? "VPIP " + Math.round(100 * st.vpip / st.hands) + "% (" + st.hands + ")"
-            : "VPIP -";
+        var text;
+        if (st && st.hands > 0) {
+            text = "VPIP " + Math.round(100 * st.vpip / st.hands) + "%" +
+                   " · PFR " + Math.round(100 * (st.pfr || 0) / st.hands) + "%" +
+                   " · 3B " + Math.round(100 * (st.threeBet || 0) / st.hands) + "%" +
+                   " (" + st.hands + ")";
+        } else {
+            text = "VPIP - · PFR - · 3B -";
+        }
         if ($badge.text() !== text) $badge.text(text);
     });
 };

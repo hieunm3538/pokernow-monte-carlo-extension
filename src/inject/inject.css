@@ -43,3 +43,47 @@
   font-size: .65rem;
   text-align: center;
 }
+
+.ev-container {
+  position: absolute;
+  left: 8.4rem;
+  top: 3.25rem;
+  color: #777;
+  text-transform: uppercase;
+  font-size: .6rem;
+  white-space: nowrap;
+}
+
+.outs-container {
+  position: absolute;
+  left: 8.4rem;
+  top: 4.25rem;
+  color: #777;
+  text-transform: uppercase;
+  font-size: .6rem;
+  white-space: nowrap;
+}
+
+.position-container {
+  position: absolute;
+  right: 8.4rem;
+  top: 3.25rem;
+  color: #777;
+  text-transform: uppercase;
+  font-size: .6rem;
+  white-space: nowrap;
+}
+
+.sizing-container {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  top: 17.75rem;
+  color: #f0f0f0;
+  font-size: .6rem;
+  white-space: nowrap;
+}
+
+.ev-value.ev-good { color: #4caf50; }
+.ev-value.ev-bad { color: #e5534b; }
+.ev-value.ev-meh { color: #e0a030; }

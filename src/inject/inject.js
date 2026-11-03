@@ -120,10 +120,13 @@ var refreshAll = function () {
         return;
     }
 
-    updatePotOdds();
-    updateWinPercent();
-    updateInfoPanel();
-    trackVpip();
+    [updatePotOdds, updateWinPercent, updateInfoPanel, trackVpip].forEach(function (step) {
+       try {
+           step();
+       } catch (e) {
+           console.error("Poker odds: "+ (step.name || "update") + " failed", e);
+       }
+    });
 }
 
 var scheduleUpdate = function () {
@@ -484,10 +487,10 @@ var renderVpip = function () {
     jQuery(".table-player").each(function () {
         var id = playerId(this);
         var $ctn = jQuery(this).find(".table-player-infos-ctn").first();
-        if (!id || $ctn.length === 0) return;
+        if (!id) return;
 
-        var $badge = $ctn.find(".vpip-badge");
-        if ($badge.length === 0) $badge = jQuery("<div class='vpip-badge'></div>").appendTo($ctn);
+        var $badge = jQuery(this).children(".vpip-badge");
+        if ($badge.length === 0) $badge = jQuery("<div class='vpip-badge'></div>").appendTo(this);
 
         var st = vpipStats[id];
         var text = st && st.hands > 0

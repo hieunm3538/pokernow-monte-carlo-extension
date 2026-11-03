@@ -71,12 +71,16 @@
 .ev-value.ev-meh { color: #e0a030; }
 
 .vpip-badge {
-  display: block;
+  position: absolute;
+  top: 100%;
+  left: 0;
+  width: 100%;
+  margin-top: .1rem;
   text-align: center;
   color: #f0f0f0;
   font-size: .6rem;
   font-weight: 700;
   white-space: nowrap;
-  position: relative;
-  top: -1.5rem;
+  z-index: 6;
+  pointer-events: none;
 }

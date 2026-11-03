@@ -33,20 +33,14 @@ var doSetup = function () {
     html = "<div class='chip-count-container'>Chip count:&nbsp;<span class='chip-count-value'>&mdash;</span></div>";
     $table.prepend(jQuery(html));
 
-    // Inject win UI box
-    html = "<div class='win-container'>Wins:&nbsp;<span class='win-value'>&mdash;</span></div>";
-    $table.prepend(jQuery(html));
-
-    // Inject ties UI box
-    html = "<div class='tie-container'>Ties:&nbsp;<span class='tie-value'>&mdash;</span></div>";
-    $table.prepend(jQuery(html));
-
-    // Inject losses UI box
-    html = "<div class='loss-container'>Losses:&nbsp;<span class='loss-value'>&mdash;</span></div>";
-    $table.prepend(jQuery(html));
-
     // Inject hands UI box
     html = "<div class='hands-container'>&nbsp;<span class='hands-value'>&mdash;</span></div>";
+    $table.prepend(jQuery(html));
+
+    // Inject win/tie/loss UI box
+    html = "<div class='results-container'>Wins: &nbsp;<span class='win-value'>&mdash;</span>" +
+        " | Ties: &nbsp;<span class='tie-value'>&mdash;</span>" +
+        " | Losses: &nbsp;<span class='loss-value'>&mdash;</span></div>";
     $table.prepend(jQuery(html));
 
     // Inject verdict (EV), outs, position/SPR and bet sizing UI boxes
@@ -57,9 +51,6 @@ var doSetup = function () {
     $table.prepend(jQuery(html));
 
     html = "<div class='position-container'>Position:&nbsp;<span class='position-value'>&mdash;</span></div>";
-    $table.prepend(jQuery(html));
-
-    html = "<div class='sizing-container'><span class='sizing-value'>&mdash;</span></div>";
     $table.prepend(jQuery(html));
 
     // Get the DOM node from jQuery object
@@ -275,7 +266,7 @@ function seatNumber(el) {
 }
 
 function dealerSeat(){
-    var m = /dealer-position-(\d+)/.exec(jQuery(".dealer-button-btn").attr("class") || "");
+    var m = /dealer-position-(\d+)/.exec(jQuery(".dealer-button-ctn").attr("class") || "");
     return m ? parseInt(m[1], 10) : null;
 }
 
@@ -319,7 +310,6 @@ var pct = function (x){ return Math.round(x * 100) + "%"; };
 var updateInfoPanel = function (){
     var $verdict = jQuery(".ev-value").removeClass("ev-good ev-bad ev-meh").html("&mdash;");
     jQuery(".position-value").html("&mdash;");
-    jQuery(".sizing-value").html("&mdash;");
 
     var $you = jQuery(".you-player");
     var active = activePlayers();
@@ -367,17 +357,6 @@ var updateInfoPanel = function (){
         spr = " | SPR " + value.toFixed(1) + (value < 4 ? " (low)" : value < 10 ? " (medium)" : " (high)");
     }
     jQuery(".position-value").html((position || "?") + spr);
-
-    // Bet sizing: a bet/raise of x pot always gives the caller x / (1 + 2x) pot odds
-    if (heroStack > 0) {
-        var heroMax = heroBet + heroStack;
-        var sizes= [["&frac13;", 1 / 3], ["&frac12;", 1 / 2], ["&frac34;", 3 / 4], ["Pot", 1]].map(function (s) {
-            var amount = Math.round(largest + s[1] * (pot + toCall));
-            return s[0] + "; " + (amount >= heroMax ? "all-in " + heroMax : amount) +
-                " (opp needs " + pct(s[1] / (1 + 2 * s[1])) + ")";
-        });
-        jQuery(".sizing-value").html((toCall > 0 ? "Raise to " : "Bet ") + sizes.join(" | "));
-    }
 };
 
 // MONTE CARLO

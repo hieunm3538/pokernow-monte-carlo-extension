@@ -32,6 +32,7 @@ var doSetup = function () {
     }
 
     if (setupObserver) setupObserver.disconnect();
+    shown = {};
     $table.find(".pot-odds-container, .chip-count-container, .results-container, .hands-container, " +
         ".ev-container, .outs-container, .position-container").remove();
 
@@ -67,7 +68,7 @@ var doSetup = function () {
     var targetNode = $table[0];
 
     // Options for the observer (which mutations to observe)
-    const config = { characterData: true, attributes: true, childList: true, subtree: true };
+    const config = { characterData: true, attributes: true, attributeFilter: ['class'], subtree: true };
 
     // Callback function to execute when mutations are observed
     var callback = function (mutationsList, observer) {
@@ -110,6 +111,14 @@ var doSetup = function () {
     }
 };
 
+var shown = {};
+
+function setHtml(selector, html) {
+    if (shown[selector] === html) return;
+    shown[selector] = html;
+    jQuery(selector).html(html);
+}
+
 var needPotOdds = false;
 var needWinPercent = false;
 var updateTimer = null;
@@ -141,13 +150,13 @@ var scheduleUpdate = function () {
         if (doWin) updateWinPercent();
         updateInfoPanel();
         trackVpip();
-    }, 50);
+    }, 10);
 }
 
 // Do the main thing
 var updatePotOdds = function () {
 
-    jQuery(".pot-odds-value").html("&mdash;");
+    var potOddsText = "&mdash;";
 
     // Extract current pot size
     var potTotal = parseChips(jQuery(".table-pot-size .main-value").first().text());
@@ -177,8 +186,9 @@ var updatePotOdds = function () {
         var callToMake = largestCurrentBet - currentPlayerBet;
         var potOdds = '' + Math.round((callToMake / (amountToWin + callToMake) * 100.00)) + '%';
 
-        jQuery(".pot-odds-value").html(potOdds);
+        potOddsText = potOdds;
     }
+    setHtml(".pot-odds-value", potOddsText);
 
     if (DEBUG) {
         console.log("Pot: " + potTotal);
@@ -192,7 +202,7 @@ var updatePotOdds = function () {
     // TODO: refactor this into a separate function, which daws current values from global variables.
     var stackTotals = jQuery(".table-player-stack").toArray().reduce((a, b) => a + stackValue(b), 0);
     var chipCount = stackTotals + potTotal + currentBetsTotal;
-    jQuery(".chip-count-value").html(chipCount);
+    setHtml(".chip-count-value", chipCount);
 };
 
 var lastWinKey = null;
@@ -343,12 +353,18 @@ var pct = function (x){ return Math.round(x * 100) + "%"; };
 
 // Verdict, position/SPR and bet sizing, all from our point of view
 var updateInfoPanel = function (){
-    var $verdict = jQuery(".ev-value").removeClass("ev-good ev-bad ev-meh").html("&mdash;");
-    jQuery(".position-value").html("&mdash;");
+    var verdict = "&mdash;", verdictClass = "", positionHtml = "&mdash;";
+    var show = function () {
+        setHtml(".ev-value", verdict);
+        var el = jQuery(".ev-value")[0];
+        var cls = "ev-value" + (verdictClass ? " " + verdictClass : "");
+        if (el && el.className !== cls) el.className = cls;
+        setHtml(".position-value", positionHtml);
+    };
 
     var $you = jQuery(".you-player");
     var active = activePlayers();
-    if ($you.length === 0 || active.indexOf($you[0]) === -1) return;
+    if ($you.length === 0 || active.indexOf($you[0]) === -1) return show();
 
     var potTotal = parseChips(jQuery(".table-pot-size .main-value").first().text());
     var bets = jQuery(".table-player p.table-player-bet-value").toArray().map(function (e) {
@@ -368,16 +384,15 @@ var updateInfoPanel = function (){
     // Verdict: compare our equity with the equity a call needs
     if (lastEquity !== null) {
         if (call <= 0) {
-            $verdict.html("Free to check &middot; equity " + pct(lastEquity));
+            verdict = "Free to check &middot; equity " + pct(lastEquity);
         } else {
             var need = call / (potWon + call);
             var edge = lastEquity - need;
             var ev = Math.round(lastEquity * potWon - (1 - lastEquity) * call);
             var label = edge > 0.03 ? "CALL +EV" : edge < -0.03 ? "FOLD -EV" : "MARGINAL";
-            $verdict
-                .addClass(edge > 0.03 ? "ev-good" : edge < -0.03 ? "ev-bad" : "ev-meh")
-                .html(label + " &middot; equity " + pct(lastEquity) + " vs need " + pct(need) +
-                    " &middot; EV " + (ev >= 0 ? "+" : "") + ev);
+            verdictClass = edge > 0.03 ? "ev-good" : edge < -0.03 ? "ev-bad" : "ev-meh";
+            verdict = label + " &middot; equity " + pct(lastEquity) + " vs need " + pct(need) +
+                    " &middot; EV " + (ev >= 0 ? "+" : "") + ev;
         }
     }
 
@@ -391,7 +406,8 @@ var updateInfoPanel = function (){
         var value = Math.min(heroStack, Math.max(...oppStacks)) / pot;
         spr = " | SPR " + value.toFixed(1) + (value < 4 ? " (low)" : value < 10 ? " (medium)" : " (high)");
     }
-    jQuery(".position-value").html((position || "?") + spr);
+    positionHtml = (position || "?") + spr;
+    show();
 };
 
 // VPIP: how often a player voluntarily puts chips in preflop (calls or raises; posting a blind doesn't count).

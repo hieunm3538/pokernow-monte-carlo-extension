@@ -75,3 +75,22 @@
   z-index: 6;
   pointer-events: none;
 }
+
+.stats-toggle {
+  position: absolute;
+  top: .4rem;
+  right: .4rem;
+  z-index: 10;
+  padding: .2rem .5rem;
+  background: rgba(0, 0, 0, .55);
+  color: #f0f0f0;
+  border: 1px solid rgba(255, 255, 255, .3);
+  border-radius: .3rem;
+  font-size: .6rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.stats-toggle:hover { background: rgba(0, 0, 0, .8); }
+
+.table.stats-hidden .vpip-badge { display: none; }

@@ -34,7 +34,15 @@ var doSetup = function () {
     if (setupObserver) setupObserver.disconnect();
     shown = {};
     $table.find(".pot-odds-container, .results-container, .hands-container, " +
-        ".ev-container, .outs-container, .position-container").remove();
+        ".ev-container, .outs-container, .position-container, .stats-toggle").remove();
+
+    // Inject button to show/hide the VPIP / PFR / 3B badges
+    var $toggle = jQuery("<button type='button' class='stats-toggle'></button>");
+    $toggle.on("click", function () {
+        setStatsHidden(!statsHidden());
+    });
+    $table.prepend($toggle);
+    setStatsHidden(statsHidden());
 
     // Inject pot odds UI box
     var html = "<div class='pot-odds-container'>Pot odds:&nbsp;<span class='pot-odds-value'>&mdash;</span></div>";
@@ -420,6 +428,18 @@ function saveVpip() {
     try { localStorage.setItem(VPIP_KEY, JSON.stringify(vpipStats)); } catch (e) {}
 }
 
+const STATS_HIDDEN_KEY = "pnmc.statsHidden";
+
+function statsHidden() {
+    try { return localStorage.getItem(STATS_HIDDEN_KEY) === "1"; } catch (e) { return false; }
+}
+
+function setStatsHidden(hidden) {
+    try { localStorage.setItem(STATS_HIDDEN_KEY, hidden ? "1" : "0"); } catch (e) {}
+    jQuery(".table").toggleClass("stats-hidden", hidden);
+    jQuery(".stats-toggle").text(hidden ? "Show stats" : "Hide stats");
+}
+
 var vpipStats = loadVpip();       // player id -> {name, hands, vpip, pfr, threeBet}
 var vpipHand = null;       // current hand: {dealer, seen, seats, voluntary, pfr, threeBet, maxBet, raiseCount}
 var vpipPostflop = true;// the next preflop starts a new hand
@@ -465,10 +485,16 @@ var trackVpip = function ()  {
             threeBet: {},
             // Largest bet seen so far this hand. Starts at the big blind so that
             // any bet above it counts as a raise (and a call of the BB does not).
-            maxBet: bl ? bl.bb : 0,
+            maxBet: 0,
+            bbSeeded: false,
             raiseCount: 0
         };
         vpipPostflop = false;
+    }
+
+    if (bl && !vpipHand.bbSeeded) {
+        vpipHand.maxBet = Math.max(vpipHand.maxBet, bl.bb);
+        vpipHand.bbSeeded = true;
     }
 
     var changed = false;
@@ -513,7 +539,7 @@ var trackVpip = function ()  {
                         vpipStats[id].pfr = (vpipStats[id].pfr || 0) + 1;
                         changed = true;
                     }
-                } else {
+                } else if (vpipHand.raiseCount === 1) {
                     if (!vpipHand.threeBet[id]) {
                         vpipHand.threeBet[id] = true;
                         vpipStats[id].threeBet = (vpipStats[id].threeBet || 0) + 1;

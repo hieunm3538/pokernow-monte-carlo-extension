@@ -451,7 +451,7 @@ function statsHidden() {
 function setStatsHidden(hidden) {
     try { localStorage.setItem(STATS_HIDDEN_KEY, hidden ? "1" : "0"); } catch (e) {}
     jQuery(".table").toggleClass("stats-hidden", hidden);
-    jQuery(".stats-toggle").text(hidden ? "Show stats" : "Hide stats");
+    jQuery(".stats-toggle:not(.stats-reset)").text(hidden ? "Show stats" : "Hide stats");
 }
 
 var vpipStats = loadVpip();       // player id -> {name, hands, vpip, pfr, threeBet}

@@ -34,7 +34,7 @@ var doSetup = function () {
     if (setupObserver) setupObserver.disconnect();
     shown = {};
     $table.find(".pot-odds-container, .results-container, .hands-container, " +
-        ".ev-container, .outs-container, .position-container, .stats-toggle").remove();
+        ".ev-container, .outs-container, .position-container, .stats-toggle, .stats-reset").remove();
 
     // Inject button to show/hide the VPIP / PFR / 3B badges
     var $toggle = jQuery("<button type='button' class='stats-toggle'></button>");
@@ -42,6 +42,12 @@ var doSetup = function () {
         setStatsHidden(!statsHidden());
     });
     $table.prepend($toggle);
+
+    var $reset = jQuery("<button type='button' class='stats-toggle stats-reset'>Reset stats</button>");
+    $reset.on("click", function () {
+       if (confirm("Reset all saved VPIP / PFR / 3B stats?")) resetVpip();
+    });
+    $table.prepend($reset);
     setStatsHidden(statsHidden());
 
     // Inject pot odds UI box
@@ -426,6 +432,14 @@ function loadVpip() {
 
 function saveVpip() {
     try { localStorage.setItem(VPIP_KEY, JSON.stringify(vpipStats)); } catch (e) {}
+}
+
+function resetVpip() {
+    try { localStorage.removeItem(VPIP_KEY); } catch (e) {}
+    vpipStats = {};
+    vpipHand = null;
+    vpipPostflop = true;
+    renderVpip();
 }
 
 const STATS_HIDDEN_KEY = "pnmc.statsHidden";

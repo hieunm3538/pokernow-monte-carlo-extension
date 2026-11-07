@@ -29,7 +29,7 @@
 
 .ev-container {
   position: absolute;
-  left: 8.4rem;
+  left: 4.4rem;
   top: 1.25rem;
   color: #777;
   text-transform: uppercase;
@@ -39,7 +39,7 @@
 
 .outs-container {
   position: absolute;
-  left: 8.4rem;
+  left: 4.4rem;
   top: 2.25rem;
   color: #777;
   text-transform: uppercase;
@@ -90,6 +90,8 @@
   font-weight: 700;
   cursor: pointer;
 }
+
+.stats-toggle.stats-reset { top: 1.7rem; }
 
 .stats-toggle:hover { background: rgba(0, 0, 0, .8); }
 

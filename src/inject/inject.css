@@ -71,7 +71,7 @@
   color: #f0f0f0;
   font-size: .6rem;
   font-weight: 700;
-  white-space: nowrap;
+  white-space: pre;
   z-index: 6;
   pointer-events: none;
 }

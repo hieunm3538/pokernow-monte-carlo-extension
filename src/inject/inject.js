@@ -418,6 +418,8 @@ var updateInfoPanel = function (){
 // There is no action feed in the DOM, so we infer it from the bets shown preflop.
 const VPIP_KEY = "pnmc.vpip";
 
+const POSTFLOP_FIELDS = ["pfBets", "pfCalls", "cbOpp", "cb", "f2cbOpp", "f2cb"];
+
 function loadVpip() {
     try {
         var data = JSON.parse(localStorage.getItem(VPIP_KEY)) || {};
@@ -425,6 +427,9 @@ function loadVpip() {
         Object.keys(data).forEach(function (id) {
             if (typeof data[id].pfr !== 'number') data[id].pfr = 0;
             if (typeof data[id].threeBet !== 'number') data[id].threeBet = 0;
+            POSTFLOP_FIELDS.forEach(function (f) {
+                if (typeof data[id][f] !== 'number') data[id][f] = 0;
+            })
         });
         return data;
     } catch (e) { return {}; }
@@ -454,7 +459,7 @@ function setStatsHidden(hidden) {
     jQuery(".stats-toggle:not(.stats-reset)").text(hidden ? "Show stats" : "Hide stats");
 }
 
-var vpipStats = loadVpip();       // player id -> {name, hands, vpip, pfr, threeBet}
+var vpipStats = loadVpip();       // player id -> {name, hands, vpip, pfr, threeBet, + POSTFLOP_FIELDS}
 var vpipHand = null;       // current hand: {dealer, seen, seats, voluntary, pfr, threeBet, maxBet, raiseCount}
 var vpipPostflop = true;// the next preflop starts a new hand
 
@@ -472,8 +477,10 @@ function blinds() {
 }
 
 var trackVpip = function ()  {
-    if (readCards(".table-cards").length > 0) {
+    var boardLen = readCards(".table-cards").length;
+    if (boardLen > 0) {
         vpipPostflop = true;
+        trackPostflop(boardLen);
         renderVpip();
         return;
     }
@@ -519,7 +526,7 @@ var trackVpip = function ()  {
         if (!id || vpipHand.seen[id] !== undefined) return;
         vpipHand.seen[id] = seatNumber(el);
         vpipHand.seats.push(seatNumber(el));
-        var st = vpipStats[id] || (vpipStats[id] = { name: "", hands: 0, vpip: 0, pfr: 0, threeBet: 0 });
+        var st = vpipStats[id] || (vpipStats[id] = { name: "", hands: 0, vpip: 0, pfr: 0, threeBet: 0, pfBets: 0, pfCalls: 0, cbOpp: 0, cb: 0, f2cbOpp: 0, f2cb: 0 });
         st.name = jQuery(el).find(".table-player-name").text().trim();
         st.hands++;
         changed = true;
@@ -562,6 +569,7 @@ var trackVpip = function ()  {
                 }
                 vpipHand.maxBet = bet;
                 vpipHand.raiseCount++;
+                vpipHand.aggressor = id;
             }
         });
     }
@@ -570,7 +578,115 @@ var trackVpip = function ()  {
     renderVpip();
 };
 
+// Postflop stats (AF, C-bet, fold to C-bet), inferred from the bets shown each street.
+// Bets reset every street, so a street keeps its own largest bet and last-seen bet per player.
+var trackPostflop = function (street) {
+    var hand = vpipHand;
+    if (!hand || street < 3) return; // no preflop seen for this hand (started watching mid-hand)
+
+    var changed = false;
+    function bump(id, field) {
+        var s = vpipStats[id];
+        if (!s) return;
+        s[field] = (s[field] || 0) + 1;
+        changed = true;
+    }
+
+    var live = {};
+    activePlayers().forEach(function (el) {
+        var id = playerId(el);
+        if (id) live[id] = true;
+    });
+
+    var st = hand.street;
+    if (!st || st.n !== street) {
+        st = hand.street = { n: street, maxBet: 0, prev: {}, stale: {}, live: live, facing: {}, bettor: null, cbOpp: false };
+        // Last street's bets can linger on screen right after the board changes; ignore them until they clear
+        jQuery(".table-player").each(function () {
+            var id = playerId(this);
+            var bet = parseChips(jQuery(this).find("p.table-player-bet-value").first().text());
+            if (id && bet > 0) st.stale[id] = bet;
+        });
+        // The preflop raiser gets a C-bet chance on the flop if still in the hand
+        if (street === 3 && hand.aggressor && live[hand.aggressor]) {
+            st.cbOpp = true;
+            bump(hand.aggressor, "cbOpp");
+        }
+    }
+
+    // Bets that grew since the last look
+    var grew = [];
+    jQuery(".table-player").each(function () {
+        var id = playerId(this);
+        if (!id || !vpipStats[id]) return;
+        var bet = parseChips(jQuery(this).find("p.table-player-bet-value").first().text());
+        if (st.stale[id] !== undefined) {
+            if (bet === st.stale[id]) bet = 0; else delete st.stale[id];
+        }
+        if (bet > (st.prev[id] || 0)) {
+            st.prev[id] = bet;
+            grew.push({ id: id, bet: bet });
+        }
+    });
+
+    if (grew.length > 0) {
+        var top = Math.max.apply(null, grew.map(function (g) { return g.bet; }));
+        var raised = top > st.maxBet;
+        var raiserDone = false;
+        grew.forEach(function (g) {
+            if (raised && g.bet === top && !raiserDone) {
+                raiserDone = true;
+                bump(g.id, "pfBets");
+                if (street === 3 && st.bettor === null) {
+                    st.bettor = g.id;
+                    if (g.id === hand.aggressor) {
+                        bump(g.id, "cb");
+                        // everyone still in (as of the last look) now faces the C-bet
+                        Object.keys(st.live).forEach(function (id) {
+                            if (id === g.id) return;
+                            st.facing[id] = true;
+                            bump(id, "f2cbOpp");
+                        });
+                    } else if (st.cbOpp) {
+                        // someone bet into the raiser first, so no C-bet chance
+                        st.cbOpp = false;
+                        var a = vpipStats[hand.aggressor];
+                        if (a && a.cbOpp > 0) { a.cbOpp--; changed = true; }
+                    }
+                }
+            } else {
+                bump(g.id, "pfCalls");
+            }
+        });
+        st.maxBet = Math.max(st.maxBet, top);
+    }
+
+    // Players who dropped out since the last look folded; if they faced the C-bet that is a fold to it
+    if (Object.keys(live).length > 0) {
+        Object.keys(st.live).forEach(function (id) {
+            if (live[id]) return;
+            delete st.live[id];
+            if (st.facing[id]) {
+                delete st.facing[id];
+                bump(id, "f2cb");
+            }
+        });
+    }
+
+    if (changed) saveVpip();
+};
+
 // Small badge under each player's name/stack
+function ratioPct(n, d) {
+    return d > 0 ? Math.round(100 * (n || 0) / d) + "%" : "-";
+}
+
+function aggFactor(st) {
+    var bets = st.pfBets || 0, calls = st.pfCalls || 0;
+    if (calls === 0) return bets > 0 ? "∞" : "-";
+    return (bets / calls).toFixed(1);
+}
+
 var renderVpip = function () {
     jQuery(".table-player").each(function () {
         var id = playerId(this);
@@ -586,9 +702,13 @@ var renderVpip = function () {
             text = "VPIP " + Math.round(100 * st.vpip / st.hands) + "%" +
                    " · PFR " + Math.round(100 * (st.pfr || 0) / st.hands) + "%" +
                    " · 3B " + Math.round(100 * (st.threeBet || 0) / st.hands) + "%" +
-                   " (" + st.hands + ")";
+                   " (" + st.hands + ")" +
+                   " (" + st.hands + ")" +
+                   "\nAF " + aggFactor(st) +
+                   " · CB " + ratioPct(st.cb, st.cbOpp) +
+                   " · F2CB " + ratioPct(st.f2cb, st.f2cbOpp);
         } else {
-            text = "VPIP - · PFR - · 3B -";
+            text = "VPIP - · PFR - · 3B -\nAF - · CB - · F2CB -";
         }
         if ($badge.text() !== text) $badge.text(text);
     });

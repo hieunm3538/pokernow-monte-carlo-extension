@@ -703,7 +703,6 @@ var renderVpip = function () {
                    " · PFR " + Math.round(100 * (st.pfr || 0) / st.hands) + "%" +
                    " · 3B " + Math.round(100 * (st.threeBet || 0) / st.hands) + "%" +
                    " (" + st.hands + ")" +
-                   " (" + st.hands + ")" +
                    "\nAF " + aggFactor(st) +
                    " · CB " + ratioPct(st.cb, st.cbOpp) +
                    " · F2CB " + ratioPct(st.f2cb, st.f2cbOpp);
